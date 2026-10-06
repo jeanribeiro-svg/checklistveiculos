@@ -1,30 +1,29 @@
-CHECKLIST DE FROTA — MVP
-==========================
+CHECKLIST DE FROTA — GOOGLE SHEETS + QR CODE
 
-1. Abra index.html em um navegador para testar.
+Abas da planilha:
+VEICULOS
+PLACA | VEICULO | ATIVO
+SXS0G68 | ONIX | TRUE
+RAA3F67 | ONIX | TRUE
 
-2. Para simular um QR Code de um veículo, use:
-   index.html?placa=ABC1D23
+VISTORIAS
+ID | DATA/HORA | PLACA | VEICULO | QUILOMETRAGEM | RESPONSAVEL | SITUACAO | OBSERVACOES
 
-   Exemplo:
-   index.html?placa=JAB1C23
+1. Crie uma planilha Google com essas duas abas e cabeçalhos.
+2. Abra Extensões > Apps Script.
+3. Crie Code.gs e Index.html e cole os arquivos deste pacote.
+4. Em Code.gs, troque COLE_AQUI_O_ID_DA_PLANILHA pelo ID da planilha.
+5. Implantar > Nova implantação > Aplicativo da Web.
+6. Executar como: sua conta.
+7. Acesso: conforme sua política do Google Workspace.
+8. URL final:
+   https://script.google.com/macros/s/SEU_DEPLOYMENT_ID/exec
 
-3. A placa é lida automaticamente da URL e fica bloqueada para edição.
+QR por veículo:
+   URL + ?placa=SXS0G68
+   URL + ?placa=RAA3F67
 
-4. Esta primeira versão salva os registros no armazenamento local do navegador
-   (localStorage). Isso permite validar o fluxo e a experiência antes da integração
-   com Google Sheets.
+O QR faz o veículo ser identificado automaticamente. A pessoa só informa responsável, KM e os 15 itens.
+O objetivo é apontar problemas para o gestor de frotas fazer a vistoria, e não substituir uma inspeção mecânica detalhada.
 
-5. Próxima etapa recomendada:
-   - Google Apps Script como API;
-   - aba "Veículos" com placa, modelo, unidade e URL/QR;
-   - aba "Inspeções" com data, hora, placa, responsável, KM e resultado;
-   - aba "Itens" com cada item do checklist;
-   - envio de fotos para Google Drive, se necessário;
-   - geração em lote dos QR Codes.
-
-Estrutura sugerida para a URL:
-   https://SEU-ENDERECO/checklist/?placa=ABC1D23
-
-Depois que o endereço final for definido, é possível gerar um QR Code diferente
-para cada veículo apontando para a sua placa.
+Os QR PNG deste pacote são apenas modelos com URL de exemplo. Depois do Deploy, substitua pela URL real.

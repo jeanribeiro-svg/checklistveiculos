@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vistoria de Frota</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#18212b;font-family:Arial,sans-serif}
+.app{max-width:620px;margin:auto;padding:14px}h1{font-size:24px;margin:5px 0}.sub{color:#68727d;font-size:14px}
+.vehicle{background:#18212b;color:white;border-radius:16px;padding:16px;margin:12px 0}.plate{font-size:26px;font-weight:800;letter-spacing:1px}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px #0001}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:7px}input,textarea{width:100%;padding:13px;border:1px solid #d6dbe0;border-radius:10px;font-size:16px}textarea{min-height:90px}
+.item{padding:14px 0;border-top:1px solid #edf0f2}.item:first-child{border-top:0}.item-title{font-weight:700;font-size:15px;margin-bottom:10px}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.choice input{display:none}.choice span{display:block;text-align:center;border:1px solid #d6dbe0;border-radius:10px;padding:11px 3px;font-size:12px;font-weight:700}
+.choice input:checked+span{background:#18212b;color:white}.obs{display:none;margin-top:9px}.obs.show{display:block}
+button{width:100%;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:800;background:#1267d6;color:white}button:disabled{opacity:.45}
+.progress{height:7px;background:#e2e6ea;border-radius:20px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:#1267d6}
+.status{font-size:13px;color:#68727d;margin-top:7px}.success{text-align:center;padding:28px 12px}.error{display:none;background:#fff1f0;color:#a4231c;padding:12px;border-radius:10px;margin:10px 0}
+</style></head><body><div class="app">
+<h1>Vistoria de Frota</h1><div class="sub">Registre somente o que precisa de atenção.</div>
+<div id="error" class="error"></div>
+<section class="vehicle"><small>VEÍCULO</small><div id="plate" class="plate"><?= placa ?></div><div id="vehicleName"></div></section>
+<main id="form">
+<section class="card"><label>Responsável pela vistoria</label><input id="responsavel" placeholder="Nome">
+<div style="height:10px"></div><label>Quilometragem</label><input id="km" type="number" inputmode="numeric" placeholder="Ex.: 45210"></section>
+<section class="card"><h2>Parte externa</h2><div id="externa"></div></section>
+<section class="card"><h2>Parte interna</h2><div id="interna"></div></section>
+<section class="card"><h2>Segurança e funcionamento</h2><div id="seguranca"></div></section>
+<section class="card"><label>Observações gerais</label><textarea id="geral" placeholder="Descreva algum problema que precise de vistoria..."></textarea>
+<div class="progress"><div id="bar" class="bar"></div></div><div id="progressText" class="status">0 itens preenchidos</div></section>
+<button id="send" disabled>Enviar vistoria</button></main>
+<section id="success" class="card success" style="display:none"><div style="font-size:48px">✓</div><h2>Vistoria registrada</h2><p>O registro foi enviado para a planilha.</p></section>
+</div>
+<script>
+const PLACA=<?= JSON.stringify(placa) ?>;
+const itens={
+externa:['Lataria, para-choques e vidros','Pneus e rodas','Faróis, lanternas e setas','Retrovisores, limpadores e vidros','Danos, avarias ou vazamentos'],
+interna:['Bancos, cintos e acabamento','Painel e indicadores','Ar-condicionado e comandos','Portas, travas e vidros','Limpeza e conservação'],
+seguranca:['Freios e freio de estacionamento','Direção, suspensão ou ruídos anormais','Buzina','Luzes de advertência no painel','Itens obrigatórios de segurança']};
+let respostas={};
+function render(sec,id){document.getElementById(id).innerHTML=itens[sec].map((x,i)=>{let k=sec+i;return `<div class="item"><div class="item-title">${x}</div><div class="choices">
+<label class="choice"><input type="radio" name="${k}" value="OK" onchange="change('${k}',this.value)"><span>OK</span></label>
+<label class="choice"><input type="radio" name="${k}" value="ATENÇÃO" onchange="change('${k}',this.value)"><span>ATENÇÃO</span></label>
+<label class="choice"><input type="radio" name="${k}" value="PROBLEMA" onchange="change('${k}',this.value)"><span>PROBLEMA</span></label></div>
+<div id="obs_${k}" class="obs"><input placeholder="O que foi identificado?" oninput="obsv('${k}',this.value)"></div></div>`}).join('')}
+function change(k,v){respostas[k]={status:v,observacao:respostas[k]?.observacao||''};document.getElementById('obs_'+k).classList.toggle('show',v!=='OK');update()}
+function obsv(k,v){respostas[k].observacao=v}
+function update(){let total=15,done=Object.keys(respostas).length;document.getElementById('bar').style.width=(done/total*100)+'%';document.getElementById('progressText').textContent=`${done} de ${total} itens preenchidos`;document.getElementById('send').disabled=!(done===total&&document.getElementById('responsavel').value.trim()&&document.getElementById('km').value)}
+['responsavel','km'].forEach(id=>document.getElementById(id).addEventListener('input',update));
+render('externa','externa');render('interna','interna');render('seguranca','seguranca');
+function err(m){let e=document.getElementById('error');e.textContent=m;e.style.display='block'}
+if(!PLACA)err('QR Code sem placa identificada.');
+else google.script.run.withSuccessHandler(v=>{if(v&&v.ativo)document.getElementById('vehicleName').textContent=v.veiculo||'';else err('Veículo não encontrado na lista.')}).withFailureHandler(e=>err(e.message)).obterVeiculo(PLACA);
+document.getElementById('send').onclick=()=>{
+let b=document.getElementById('send');b.disabled=true;b.textContent='Enviando...';
+let vals=Object.values(respostas),sit=vals.some(x=>x.status==='PROBLEMA')?'NÃO CONFORME':vals.some(x=>x.status==='ATENÇÃO')?'ATENÇÃO':'OK';
+let obs=document.getElementById('geral').value.trim()+'\n'+Object.entries(respostas).filter(([k,v])=>v.status!=='OK').map(([k,v])=>k+': '+v.status+(v.observacao?' - '+v.observacao:'')).join('\n');
+google.script.run.withSuccessHandler(()=>{document.getElementById('form').style.display='none';document.getElementById('success').style.display='block'}).withFailureHandler(e=>{b.disabled=false;b.textContent='Enviar vistoria';err('Não foi possível salvar: '+e.message)}).salvarVistoria({placa:PLACA,veiculo:document.getElementById('vehicleName').textContent,quilometragem:document.getElementById('km').value,responsavel:document.getElementById('responsavel').value.trim(),situacao:sit,observacoes:obs});
+};
+</script></body></html>
