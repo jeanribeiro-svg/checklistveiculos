@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Checklist de Frota</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;padding:20px 18px 18px;position:sticky;top:0;z-index:5}
+.header-row{display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-size:19px;font-weight:800}.subtitle{font-size:12px;opacity:.72;margin-top:3px}
+.plate{background:white;color:#111827;border-radius:10px;padding:8px 12px;font-weight:900;letter-spacing:1px;font-size:16px}
+main{max-width:680px;margin:auto;padding:14px 14px 110px}.card{background:white;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px #00000012}
+h2{font-size:17px;margin:0 0 12px}.vehicle-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;font-size:12px;color:#6b7280;margin-bottom:5px;font-weight:700}.field input,.field select,.field textarea{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:12px;font-size:16px;background:#fff}.field textarea{min-height:80px;resize:vertical}
+.item{border-top:1px solid #eef0f3;padding:13px 0}.item:first-child{border-top:0;padding-top:0}.item-title{font-weight:700;font-size:15px;margin-bottom:9px}.choices{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.choice input{display:none}.choice span{display:block;text-align:center;border:1px solid #d1d5db;border-radius:9px;padding:9px 3px;font-size:11px;font-weight:800;background:#fff}.choice input:checked+span{border-color:#111827;background:#111827;color:#fff}
+.problem{display:none;margin-top:9px}.problem.show{display:block}.problem textarea{width:100%;min-height:60px;border:1px solid #f59e0b;border-radius:9px;padding:10px;font-size:14px}
+.progress{height:7px;background:#e5e7eb;border-radius:10px;overflow:hidden;margin-top:8px}.bar{height:100%;width:0;background:#111827;transition:.2s}
+.sticky{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;padding:10px max(14px,calc((100vw - 680px)/2 + 14px));z-index:10}.btn{width:100%;border:0;border-radius:12px;padding:15px;background:#111827;color:#fff;font-size:16px;font-weight:900}.btn:disabled{opacity:.45}
+.notice{padding:12px;border-radius:10px;background:#fef3c7;color:#92400e;font-size:13px;margin-top:10px;display:none}.success{display:none;text-align:center;padding:30px 10px}.success h2{font-size:24px}.ok{font-size:55px}
+@media(max-width:420px){.choices{grid-template-columns:repeat(2,1fr)}.vehicle-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="header-row"><div><div class="brand">Checklist de Frota</div><div class="subtitle">Inspeção do veículo</div></div><div class="plate" id="plateBadge">---</div></div></header>
+<main id="app">
+<section class="card">
+<h2>🚗 Identificação</h2>
+<div class="vehicle-grid">
+<div class="field"><label>Placa</label><input id="plate" readonly></div>
+<div class="field"><label>Quilometragem *</label><input id="km" type="number" inputmode="numeric" placeholder="Ex.: 125430"></div>
+</div>
+<div class="field" style="margin-top:10px"><label>Responsável *</label><input id="driver" placeholder="Nome do responsável"></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div id="progressText" style="font-size:12px;color:#6b7280;margin-top:5px">0% preenchido</div>
+</section>
+
+<div id="sections"></div>
+
+<section class="card">
+<h2>📝 Observações gerais</h2>
+<div class="field"><textarea id="general" placeholder="Informe qualquer situação que não tenha sido registrada nos itens..."></textarea></div>
+<div class="notice" id="notice">Existem itens marcados como problema/atenção. Revise as observações antes de finalizar.</div>
+</section>
+
+<section class="card success" id="success">
+<div class="ok">✓</div><h2>Checklist registrado!</h2><p id="successText"></p>
+<button class="btn" onclick="location.reload()">Novo checklist</button>
+</section>
+</main>
+
+<div class="sticky"><button class="btn" id="finish" disabled>Finalizar checklist</button></div>
+
+<script>
+const sections = {
+"Exterior": ["Pneus","Estepe","Rodas","Para-brisa","Vidros","Retrovisores","Limpadores de para-brisa","Lataria / avarias","Faróis","Lanternas","Setas","Luz de freio","Luz de ré"],
+"Interior": ["Bancos","Cintos de segurança","Painel / indicadores","Buzina","Ar-condicionado","Vidros elétricos","Travas das portas","Retrovisor interno"],
+"Segurança": ["Extintor (se aplicável)","Triângulo","Macaco e chave de roda","Freio de estacionamento","Luzes de advertência / ABS","Airbags / indicadores"],
+"Mecânica": ["Partida / funcionamento do motor","Freios","Direção","Suspensão","Vazamentos aparentes","Óleo","Líquido de arrefecimento","Ruídos anormais"],
+"Documentação": ["CRLV / documentação","Seguro (se aplicável)"]
+};
+const params=new URLSearchParams(location.search);
+const plate=(params.get("placa")||params.get("plate")||"ABC1D23").toUpperCase();
+document.getElementById("plate").value=plate;
+document.getElementById("plateBadge").textContent=plate;
+
+let allItems=[];
+const sectionsEl=document.getElementById("sections");
+for(const [section,items] of Object.entries(sections)){
+ let card=document.createElement("section");card.className="card";
+ card.innerHTML=`<h2>${section==="Exterior"?"🛞":section==="Interior"?"🪑":section==="Segurança"?"🛡️":section==="Mecânica"?"🔧":"📄"} ${section}</h2>`;
+ items.forEach((name,idx)=>{
+  const id="i"+allItems.length; allItems.push({id,name,section});
+  const div=document.createElement("div");div.className="item";
+  div.innerHTML=`<div class="item-title">${name}</div><div class="choices">
+  <label class="choice"><input type="radio" name="${id}" value="OK"><span>✓ OK</span></label>
+  <label class="choice"><input type="radio" name="${id}" value="ATENÇÃO"><span>⚠ Atenção</span></label>
+  <label class="choice"><input type="radio" name="${id}" value="PROBLEMA"><span>✕ Problema</span></label>
+  <label class="choice"><input type="radio" name="${id}" value="N/A"><span>— N/A</span></label>
+  </div><div class="problem" id="${id}-p"><textarea placeholder="Descreva o problema/atenção..."></textarea></div>`;
+  card.appendChild(div);
+  div.querySelectorAll("input").forEach(r=>r.addEventListener("change",()=>{
+    div.querySelector(".problem").classList.toggle("show",r.value==="PROBLEMA"||r.value==="ATENÇÃO");
+    updateProgress();
+  }));
+ });
+ sectionsEl.appendChild(card);
+}
+function updateProgress(){
+ let done=0,bad=0;
+ allItems.forEach(x=>{let r=document.querySelector(`input[name="${x.id}"]:checked`);if(r){done++;if(r.value==="PROBLEMA"||r.value==="ATENÇÃO")bad++;}});
+ const pct=Math.round(done/allItems.length*100);document.getElementById("bar").style.width=pct+"%";document.getElementById("progressText").textContent=`${pct}% preenchido (${done}/${allItems.length})`;
+ const ready=done===allItems.length && document.getElementById("km").value && document.getElementById("driver").value.trim();
+ document.getElementById("finish").disabled=!ready;
+ document.getElementById("notice").style.display=bad?"block":"none";
+}
+document.getElementById("km").addEventListener("input",updateProgress);document.getElementById("driver").addEventListener("input",updateProgress);
+
+document.getElementById("finish").addEventListener("click",()=>{
+ const now=new Date(), results=[];
+ allItems.forEach(x=>{
+   const r=document.querySelector(`input[name="${x.id}"]:checked`);
+   const obs=r && (r.value==="PROBLEMA"||r.value==="ATENÇÃO") ? document.querySelector(`#${x.id}-p textarea`).value : "";
+   results.push({categoria:x.section,item:x.name,status:r.value,observacao:obs});
+ });
+ const record={data_hora:now.toISOString(),placa:plate,quilometragem:document.getElementById("km").value,responsavel:document.getElementById("driver").value.trim(),resultado:results.some(x=>x.status==="PROBLEMA")?"NÃO CONFORME":results.some(x=>x.status==="ATENÇÃO")?"ATENÇÃO":"OK",observacoes_gerais:document.getElementById("general").value,itens:results};
+ const old=JSON.parse(localStorage.getItem("checklists_frota")||"[]");old.push(record);localStorage.setItem("checklists_frota",JSON.stringify(old));
+ document.querySelectorAll("#sections,.card:not(#success)").forEach(e=>e.style.display="none");
+ document.getElementById("success").style.display="block";document.getElementById("successText").textContent=`Veículo ${plate} • ${record.resultado} • ${new Date().toLocaleString("pt-BR")}`;
+ document.querySelector(".sticky").style.display="none";window.scrollTo(0,0);
+});
+</script>
+</body>
+</html>
